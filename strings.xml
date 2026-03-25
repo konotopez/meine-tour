@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">MedRoute Tracker</string>
+    <string name="share_pdf_chooser">Поделиться PDF отчётом</string>
+    <string name="share_html_chooser">Поделиться HTML-таблицей</string>
+    <string name="location_permission_denied">Разрешение на геолокацию не выдано.</string>
+    <string name="saved_pdf_message">PDF сохранён и готов к отправке.</string>
+    <string name="saved_html_message">HTML-таблица сохранена и готова к отправке.</string>
+    <string name="open_in_maps_failed">Не удалось открыть карты.</string>
+    <string name="open_dialer_failed">Не удалось открыть набор номера.</string>
+    <string name="save_failed">Не удалось сохранить файл.</string>
+</resources>

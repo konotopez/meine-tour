@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Трекер v9.9 PRO-Route</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root[data-theme="light"] { --bg-body: #f0f3f5; --bg-card: #ffffff; --text-main: #2c3e50; --text-sub: #666666; --bg-input: #ffffff; --border-color: #dddddd; }
+        :root[data-theme="dark"] { --bg-body: #121212; --bg-card: #1e1e1e; --text-main: #e0e0e0; --text-sub: #b0b0b0; --bg-input: #2d2d2d; --border-color: #404040; }
+        :root { --primary: #3498db; --success: #27ae60; --warning: #f39c12; --danger: #e74c3c; --dark: #2c3e50; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 15px; background: var(--bg-body); color: var(--text-main); padding-bottom: 30px; transition: 0.3s; }
+        .side-menu { position: fixed; top: 0; right: -100%; width: 100vw; height: 100vh; background: var(--bg-card); z-index: 10000; transition: 0.3s ease-out; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .side-menu.active { right: 0; }
+        .clock-card { background: var(--dark); color: white; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px; }
+        .time { font-size: 28px; font-weight: bold; }
+        .main-card { background: var(--bg-card); padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 20px; border-top: 6px solid var(--primary); }
+        .timer-display { font-size: 32px; font-family: monospace; font-weight: bold; color: var(--danger); text-align: center; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 10px; margin: 10px 0; border: 1px solid var(--border-color); }
+        button { padding: 18px 10px; border: none; border-radius: 12px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.1s; -webkit-tap-highlight-color: transparent; }
+        .btn-road { background: var(--warning); opacity: 0.5; }
+        .btn-client { background: var(--success); opacity: 0.5; }
+        .btn-active-road { background: #d35400 !important; opacity: 1 !important; border: 2px solid white; }
+        .btn-active-client { background: #1e8449 !important; opacity: 1 !important; border: 2px solid white; }
+        .btn-pdf { width: 100%; background: #e67e22; margin-top: 15px; padding: 20px; font-size: 18px; }
+        .btn-map { background: #4285F4; padding: 10px; border-radius: 8px; font-size: 12px; }
+        .btn-call { background: #2980b9; padding: 10px; border-radius: 8px; font-size: 12px; }
+        .edit-item { background: rgba(128,128,128,0.1); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); }
+        .edit-item input, .edit-item select { width: 100%; border: 1px solid var(--border-color); padding: 10px; margin-top: 5px; border-radius: 8px; box-sizing: border-box; background: var(--bg-input); color: var(--text-main); font-size: 14px; }
+        .report-edit-item { background: rgba(142,68,173,0.10); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(142,68,173,0.35); }
+        .report-edit-item input { width: 100%; border: 1px solid var(--border-color); padding: 10px; margin-top: 5px; border-radius: 8px; box-sizing: border-box; background: var(--bg-input); color: var(--text-main); font-size: 14px; }
+        .report-badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+        .report-badge.auto { background:#34495e; color:#fff; }
+        .report-badge.manual { background:#8e44ad; color:#fff; }
+        .prio-btn { background: #555; color: white; padding: 5px 12px; border-radius: 6px; font-size: 18px; margin-right: 5px; }
+        .history-item { background: var(--bg-card); padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 5px solid var(--primary); display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div id="side-menu" class="side-menu">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin: 0;">План и Оптимизация</h3>
+        <span style="font-size: 40px; cursor: pointer;" onclick="toggleMenu()">×</span>
+    </div>
+    <button style="background:#16a085; width:100%; margin-bottom:10px;" onclick="smartOptimize()">🧠 УМНАЯ ОПТИМИЗАЦИЯ (ТОЛЬКО ✅)</button>
+    <div id="edit-list"></div>
+    <button style="background:var(--primary); width:100%; padding:15px; margin-top:10px;" onclick="addNewPatient()">+ ДОБАВИТЬ ПАЦИЕНТА</button>
+
+    <div style="margin-top:24px; margin-bottom:8px; font-size:18px; font-weight:700;">Редактор отчёта / Tabelle</div>
+    <div style="font-size:13px; opacity:0.85; margin-bottom:12px;">
+        Здесь можно отмечать строки галочками, менять имя пациента, von / bis, двигать вверх-вниз и удалять строки.
+        При нажатии <b>СКАЧАТЬ TABELLE HTML</b> сохранится уже отредактированная таблица.
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+        <button style="background:#8e44ad; flex:1;" onclick="addReportRow()">+ СТРОКА В ОТЧЁТ</button>
+        <button style="background:#7f8c8d; flex:1;" onclick="resetReportRows()">↺ СБРОС ИЗ ЛОГОВ</button>
+        <button style="background:#2980b9; flex:1 1 100%;" onclick="syncReportRowsFromMainList()">⇢ ДОБАВИТЬ ОТМЕЧЕННЫХ ИЗ ОСНОВНОГО СПИСКА</button>
+    </div>
+    <div id="report-edit-list"></div>
+
+    <button style="background:var(--success); width:100%; margin-top:20px; padding: 20px;" onclick="saveAndClose()">СОХРАНИТЬ ПОРЯДОК</button>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <button style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 50%; width: 45px; height: 45px; font-size: 20px; color: var(--text-main);" onclick="toggleTheme()">🌓</button>
+    <div style="font-size: 35px; cursor: pointer;" onclick="toggleMenu()">☰</div>
+</div>
+
+<div class="clock-card">
+    <div class="time" id="live-clock">00:00:00</div>
+    <div id="live-date" style="font-size: 14px; opacity: 0.8;"></div>
+</div>
+
+
+<div class="main-card" style="border-top: 6px solid #16a085;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="flex:1; min-width:0;">
+            <div style="font-size: 12px; font-weight:700; color:#16a085; margin-bottom:4px;">ГЕОЛОКАЦИЯ</div>
+            <div id="geo-status" style="font-size:15px; font-weight:700;">координаты ещё не получены</div>
+            <div id="geo-meta" style="font-size:12px; color: var(--text-sub); line-height:1.35; word-break:break-word;"></div>
+        </div>
+        <button class="btn-map" style="background:#16a085; padding:14px 12px;" onclick="requestGeo()">📡 ОБНОВИТЬ</button>
+    </div>
+</div>
+
+<div class="main-card">
+    <div id="status-tag" style="font-size: 11px; font-weight: bold; color: var(--primary); margin-bottom: 5px;">СТАТУС: ГОТОВ</div>
+    <h2 id="p-name" style="margin: 5px 0; font-size: 22px;">...</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: rgba(128,128,128,0.1); padding: 10px; border-radius: 10px;">
+        <div id="p-addr" style="font-size: 14px; color: var(--text-sub); line-height: 1.2; flex:1;">...</div>
+        <button class="btn-map" onclick="openMap()">📍 КАРТА</button>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: rgba(128,128,128,0.1); padding: 10px; border-radius: 10px;">
+        <div id="p-tel" style="font-size: 15px; font-weight: bold; color: var(--primary);">тел. -</div>
+        <button class="btn-call" onclick="makeCall()">📞 ЗВОНОК</button>
+    </div>
+    <div style="font-size: 14px;">План: <b id="p-plan" style="color:var(--primary)">-</b></div>
+    <div class="timer-display" id="timer-val">00:00:00</div>
+</div>
+
+<div id="normal-controls" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+    <button id="btn-road" class="btn-road" onclick="press('road')">В ДОРОГЕ</button>
+    <button id="btn-client" class="btn-client" onclick="press('client')">У ПАЦИЕНТА</button>
+</div>
+
+<div id="office-controls" style="display:none;">
+    <button id="btn-office-go" style="background: #5d6d7e; width:100%;" onclick="press('office')">ЕДУ В ОФИС 🏢</button>
+    <button id="btn-office-stop" style="background: var(--danger); width:100%; display:none; padding: 20px;" onclick="press('stop')">ЗАВЕРШИТЬ СМЕНУ 🏁</button>
+</div>
+
+<div id="finish-controls" style="display:none;">
+    <button style="background: var(--primary); width: 100%; padding: 20px;" onclick="startNewShift()">НОВАЯ СМЕНА</button>
+</div>
+
+
+<button id="pdf-btn" class="btn-pdf" onclick="generatePDF()">📥 СКАЧАТЬ PDF ОТЧЕТ</button>
+<button id="table-btn" class="btn-pdf" style="background:#8e44ad;" onclick="downloadTabelleHTML()">📋 СКАЧАТЬ TABELLE HTML</button>
+<div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+  <button class="btn-pdf" style="background:#2c3e50;" onclick="setReportDateAuto()">🕒 АВТО ДАТА</button>
+  <label style="font-weight:600;">Дата отчёта:</label>
+  <input id="report-date-input" type="date" onchange="setReportDateManual(this.value)" style="padding:10px 12px; border-radius:8px; border:1px solid #bbb; font-size:16px;">
+  <span id="report-date-mode" style="font-weight:600;"></span>
+  <span id="report-date-label" style="font-weight:700;"></span>
+</div>
+<div id="history-list" style="margin-top: 15px;"></div>
+
+
+<script>
+const OFFICE_ADDR = "Rothenbaumchaussee 105, 20148 Hamburg";
+const defaultPatients = [
+    {n: "Eglin, Helmut", a: "Rothenbaumchaussee 237, 20149 Hamburg", t: "06:15", p: "45 55 33", active: true, z: 1},
+    {n: "Mahmoudi, Mahmoud", a: "Isestraße 49, 20149 Hamburg", t: "06:35", p: "461 660", active: true, z: 1},
+    {n: "Hansen, Bettina", a: "Isestraße 60, 20149 Hamburg", t: "07:15", p: "017618818880", active: true, z: 1},
+    {n: "Klebanov, Alexander", a: "Hermann-Kaufmann-Straße 4A, 22307 Hamburg", t: "08:00", p: "61198244", active: true, z: 5},
+    {n: "Gubetskaya, Vera", a: "Hermann-Kauffmann-Str. 4A, 22307 Hamburg", t: "08:10", p: "61198244", active: true, z: 5},
+    {n: "Wilzer, Margarethe", a: "Alte Rabenstr. 6, 20148 Hamburg", t: "09:05", p: "443872", active: true, z: 2},
+    {n: "Suckow, Dieter", a: "Grindelallee 89, 20146 Hamburg", t: "09:40", p: "", active: true, z: 2},
+    {n: "Starobinskaja, Galina", a: "Dorotheenstr. 76, 22301 Hamburg", t: "10:05", p: "274362", active: true, z: 4},
+    {n: "Schweitzer, Ema", a: "Eppendorfer Landstrasse 97-101, 20251 Hamburg", t: "10:35", p: "017648147970", active: true, z: 3},
+    {n: "Muniz de Faria, Dermeval", a: "Schroderstiftstraße 3, 20146 Hamburg", t: "", p: "040456564", active: true, z: 2},
+    {n: "Hummer, Josef", a: "Mittelweg 68, 20149 Hamburg", t: "", p: "41469743", active: true, z: 2},
+    {n: "Schmieder, Christel", a: "Hansastraße 22, 20149 Hamburg", t: "", p: "448 098 86", active: true, z: 2},
+    {n: "Mahrling, Katarina", a: "Hallerstraße 76, 20146 Hamburg", t: "", p: "451646", active: true, z: 2}
+];
+
+function mergeDefaultPatients(existing) {
+    const list = Array.isArray(existing) ? [...existing] : [];
+    defaultPatients.forEach(dp => {
+        const exists = list.some(p =>
+            String(p.n || '').trim().toLowerCase() === String(dp.n || '').trim().toLowerCase() &&
+            String(p.a || '').trim().toLowerCase() === String(dp.a || '').trim().toLowerCase()
+        );
+        if (!exists) list.push({...dp});
+    });
+    return list;
+}
+
+let patients = mergeDefaultPatients(JSON.parse(localStorage.getItem('medPatients')) || [...defaultPatients]);
+localStorage.setItem('medPatients', JSON.stringify(patients));
+let logs = JSON.parse(localStorage.getItem('medLogs')) || [];
+let currentIdx = parseInt(localStorage.getItem('medIdx')) || 0;
+let isFinished = localStorage.getItem('medFin') === 'true';
+let startTime, timerInt, curMode = null, vonTime = null, lastWeg = "00:00:00", shiftStartTs = localStorage.getItem('shiftStartTs');
+let lastGeo = null;
+
+
+function tick() {
+    const d = new Date();
+    document.getElementById('live-clock').innerText = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    document.getElementById('live-date').innerText = d.toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
+}
+setInterval(tick, 1000); tick();
+
+
+function hydrateGeo() {
+    try {
+        lastGeo = JSON.parse(localStorage.getItem('lastGeo') || 'null');
+    } catch(e) {
+        lastGeo = null;
+    }
+    renderGeo();
+}
+
+function persistGeo(value) {
+    lastGeo = value || null;
+    if (lastGeo) localStorage.setItem('lastGeo', JSON.stringify(lastGeo));
+    else localStorage.removeItem('lastGeo');
+    renderGeo();
+}
+
+function formatGeoShort(geo) {
+    if (!geo || geo.lat === undefined || geo.lng === undefined) return '—';
+    return `${Number(geo.lat).toFixed(5)}, ${Number(geo.lng).toFixed(5)}`;
+}
+
+function renderGeo() {
+    const status = document.getElementById('geo-status');
+    const meta = document.getElementById('geo-meta');
+    if (!status || !meta) return;
+    if (!lastGeo || lastGeo.lat === undefined || lastGeo.lng === undefined) {
+        status.innerText = 'координаты ещё не получены';
+        meta.innerText = 'Нажмите «Обновить», чтобы записать текущее местоположение.';
+        return;
+    }
+    const acc = lastGeo.accuracy ? `точность ±${Math.round(lastGeo.accuracy)} м` : 'точность неизвестна';
+    const source = lastGeo.source ? ` • ${lastGeo.source}` : '';
+    const updated = lastGeo.updatedAt ? new Date(lastGeo.updatedAt).toLocaleString('ru-RU') : '';
+    status.innerText = `📍 ${formatGeoShort(lastGeo)}`;
+    meta.innerText = `${acc}${source}${updated ? ` • ${updated}` : ''}`;
+}
+
+function onGeoSuccess(position, source = 'browser') {
+    const coords = position.coords || position;
+    persistGeo({
+        lat: Number(coords.latitude),
+        lng: Number(coords.longitude),
+        accuracy: Number(coords.accuracy || 0),
+        updatedAt: new Date().toISOString(),
+        source
+    });
+}
+
+function onGeoError(message, silent = false) {
+    const status = document.getElementById('geo-status');
+    const meta = document.getElementById('geo-meta');
+    if (status) status.innerText = 'геолокация недоступна';
+    if (meta) meta.innerText = message || 'Не удалось определить местоположение.';
+    if (!silent) {
+        console.warn('Geo error:', message || 'unknown');
+    }
+}
+
+function requestGeo(silent = false) {
+    if (window.AndroidBridge && typeof AndroidBridge.requestLocationRefresh === 'function') {
+        AndroidBridge.requestLocationRefresh(silent ? 'silent' : 'manual');
+        return;
+    }
+    if (!navigator.geolocation) {
+        onGeoError('Браузер не поддерживает геолокацию.', silent);
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        pos => onGeoSuccess(pos, 'browser'),
+        err => onGeoError(err && err.message ? err.message : 'Нет доступа к геолокации.', silent),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
+}
+
+function getGeoSnapshot() {
+    return lastGeo ? JSON.parse(JSON.stringify(lastGeo)) : null;
+}
+
+window.__onNativeLocation = function(payload) {
+    try {
+        const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        if (parsed && parsed.lat !== undefined && parsed.lng !== undefined) onGeoSuccess({coords: {latitude: parsed.lat, longitude: parsed.lng, accuracy: parsed.accuracy}}, parsed.source || 'android');
+    } catch (e) {
+        console.warn('Location payload parse error', e);
+    }
+};
+
+window.__onNativeLocationError = function(message) {
+    onGeoError(message || 'Android не вернул геолокацию.', true);
+};
+
+function buildNativeReportPayload() {
+    const rows = getReportRows().filter(r => r.include);
+    const sec = getReportTotalSeconds();
+    const h = Math.floor(sec/3600).toString().padStart(2,'0');
+    const m = Math.floor((sec%3600)/60).toString().padStart(2,'0');
+    const s = (sec%60).toString().padStart(2,'0');
+    const selectedDate = getSelectedReportDate();
+    return {
+        title: 'Shift Report',
+        dateRu: selectedDate.toLocaleDateString('ru-RU'),
+        dateDe: selectedDate.toLocaleDateString('de-DE'),
+        generatedAt: new Date().toISOString(),
+        totalDuration: `${h}:${m}:${s}`,
+        totalHoursDecimal: formatDurationDecimalHours(sec),
+        location: getGeoSnapshot(),
+        rows: rows.map(r => ({ name: r.name || '', von: r.von || '', bis: r.bis || '' }))
+    };
+}
+
+function toggleTheme() {
+    const h = document.documentElement;
+    const n = h.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    h.setAttribute('data-theme', n); localStorage.setItem('medTheme', n);
+}
+document.documentElement.setAttribute('data-theme', localStorage.getItem('medTheme') || 'dark');
+
+function toggleMenu() {
+    document.getElementById('side-menu').classList.toggle('active');
+    if(document.getElementById('side-menu').classList.contains('active')) {
+        renderEditList();
+        mergeSuggestedPatientsIntoReportRows();
+        renderReportEditList();
+    }
+}
+
+function movePrio(i, d) {
+    let t = i + d;
+    if(t >= 0 && t < patients.length) { [patients[i], patients[t]] = [patients[t], patients[i]]; renderEditList(); }
+}
+
+function smartOptimize() {
+    let activeOnes = patients.filter(p => p.active);
+    let inactiveOnes = patients.filter(p => !p.active);
+    const first = activeOnes.find(p => p.n.includes("Eglin"));
+    let restActive = activeOnes.filter(p => !p.n.includes("Eglin"));
+    restActive.sort((a, b) => (a.z || 9) - (b.z || 9) || a.a.localeCompare(b.a));
+    patients = first ? [first, ...restActive, ...inactiveOnes] : [...restActive, ...inactiveOnes];
+    renderEditList();
+}
+
+function cancelOptimize() { patients = [...defaultPatients]; renderEditList(); }
+function addNewPatient() { patients.push({n: "", a: "", t: "", p: "", active: true, z: 9}); localStorage.setItem('medPatients', JSON.stringify(patients)); renderEditList(); }
+
+function duplicatePatient(i) {
+    const p = patients[i];
+    if (!p) return;
+    patients.splice(i + 1, 0, { ...p });
+    localStorage.setItem('medPatients', JSON.stringify(patients));
+    renderEditList();
+}
+
+
+function normalizeTimeValue(v) {
+    let s = String(v || '').trim().replace(',', ':').replace('.', ':');
+    if (!s) return '';
+    const m = s.match(/^(\d{1,2})(?::?(\d{1,2}))?$/);
+    if (!m) return s;
+    let hh = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+    let mm = m[2] === undefined ? 0 : Math.max(0, Math.min(59, parseInt(m[2], 10)));
+    return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+
+
+
+function buildSuggestedReportRowsFromPatients() {
+    return patients
+        .filter(p => p && p.active)
+        .map(p => ({
+            name: p.n || '',
+            von: '',
+            bis: '',
+            include: true,
+            source: 'patient'
+        }));
+}
+
+function mergeSuggestedPatientsIntoReportRows() {
+    const rows = getReportRows();
+    const existingNames = new Set(
+        rows
+            .map(r => String(r.name || '').trim().toLowerCase())
+            .filter(Boolean)
+    );
+
+    const additions = [];
+    patients
+        .filter(p => p && p.active)
+        .forEach(p => {
+            const name = String(p.n || '').trim();
+            if (!name) return;
+            const key = name.toLowerCase();
+            if (!existingNames.has(key)) {
+                additions.push({
+                    name,
+                    von: '',
+                    bis: '',
+                    include: true,
+                    source: 'patient'
+                });
+                existingNames.add(key);
+            }
+        });
+
+    if (additions.length) {
+        const merged = [...rows, ...additions];
+        saveReportRows(merged);
+    }
+}
+
+function buildDefaultReportRows() {
+    const patientLogs = logs.filter(l => l.n !== 'ОФИС');
+    const officeLogs = logs.filter(l => l.n === 'ОФИС');
+    const shiftStartTime = formatHHMMFromTimestamp(shiftStartTs);
+    const firstPatientVon = patientLogs.length ? (patientLogs[0].von || '') : '';
+    const rows = [];
+
+    if (shiftStartTime && firstPatientVon && shiftStartTime !== firstPatientVon) {
+        rows.push({
+            name: 'Vom Büro zum 1. Patienten',
+            von: shiftStartTime,
+            bis: firstPatientVon,
+            include: true,
+            source: 'auto'
+        });
+    }
+
+    patientLogs.forEach(l => {
+        rows.push({
+            name: l.n || '',
+            von: l.von || '',
+            bis: l.bis || '',
+            include: true,
+            source: 'patient'
+        });
+    });
+
+    const lastOffice = officeLogs.length ? officeLogs[officeLogs.length - 1] : null;
+    if (lastOffice && lastOffice.von && lastOffice.bis) {
+        rows.push({
+            name: 'Vom letzten Patienten ins Büro',
+            von: lastOffice.von || '',
+            bis: lastOffice.bis || '',
+            include: true,
+            source: 'auto'
+        });
+    }
+
+    return rows;
+}
+
+function loadReportRows() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('reportRowsOverride') || 'null');
+        if (Array.isArray(saved) && saved.length) return saved;
+    } catch(e) {}
+    const built = buildDefaultReportRows();
+    if (built.length) {
+        localStorage.setItem('reportRowsOverride', JSON.stringify(built));
+        return built;
+    }
+    const suggested = buildSuggestedReportRowsFromPatients();
+    localStorage.setItem('reportRowsOverride', JSON.stringify(suggested));
+    return suggested;
+}
+
+function saveReportRows(rows) {
+    localStorage.setItem('reportRowsOverride', JSON.stringify(rows));
+}
+
+function getReportRows() {
+    return loadReportRows().map(r => ({
+        name: r.name || '',
+        von: normalizeTimeValue(r.von || ''),
+        bis: normalizeTimeValue(r.bis || ''),
+        include: r.include !== false,
+        source: r.source || 'manual'
+    }));
+}
+
+function moveReportRow(i, delta) {
+    const rows = getReportRows();
+    const t = i + delta;
+    if (t < 0 || t >= rows.length) return;
+    [rows[i], rows[t]] = [rows[t], rows[i]];
+    saveReportRows(rows);
+    renderReportEditList();
+}
+
+function updateReportRowField(i, field, value) {
+    const rows = getReportRows();
+    if (!rows[i]) return;
+    rows[i][field] = (field === 'von' || field === 'bis') ? normalizeTimeValue(value) : value;
+    saveReportRows(rows);
+    renderReportEditList();
+}
+
+function toggleReportRow(i, checked) {
+    const rows = getReportRows();
+    if (!rows[i]) return;
+    rows[i].include = !!checked;
+    saveReportRows(rows);
+    renderReportEditList();
+}
+
+function deleteReportRow(i) {
+    const rows = getReportRows();
+    rows.splice(i, 1);
+    saveReportRows(rows);
+    renderReportEditList();
+}
+
+function addReportRow() {
+    const rows = getReportRows();
+    rows.push({ name: '', von: '', bis: '', include: true, source: 'manual' });
+    saveReportRows(rows);
+    renderReportEditList();
+}
+
+function resetReportRows() {
+    saveReportRows(buildDefaultReportRows());
+    renderReportEditList();
+}
+
+function syncReportRowsFromMainList() {
+    mergeSuggestedPatientsIntoReportRows();
+    renderReportEditList();
+}
+
+function renderReportEditList() {
+    const c = document.getElementById('report-edit-list');
+    if (!c) return;
+    const rows = getReportRows();
+    c.innerHTML = '';
+    rows.forEach((row, i) => {
+        const d = document.createElement('div');
+        d.className = 'report-edit-item';
+        d.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <button class="prio-btn" onclick="moveReportRow(${i},-1)">▲</button>
+                    <button class="prio-btn" onclick="moveReportRow(${i},1)">▼</button>
+                    <button class="prio-btn" style="background:#c0392b;" onclick="deleteReportRow(${i})">✕</button>
+                    <span style="font-weight:700;">Строка ${i + 1}</span>
+                    <span class="report-badge ${row.source === 'manual' ? 'manual' : 'auto'}">${row.source === 'manual' ? 'manual' : 'auto'}</span>
+                </div>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:700;">
+                    <input type="checkbox" style="width:22px; height:22px;" ${row.include ? 'checked' : ''} onchange="toggleReportRow(${i}, this.checked)">
+                    Включить
+                </label>
+            </div>
+            <input type="text" value="${escapeHtml(row.name)}" onchange="updateReportRowField(${i}, 'name', this.value)" placeholder="Название / пациент">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div><input type="text" value="${escapeHtml(row.von)}" onchange="updateReportRowField(${i}, 'von', this.value)" placeholder="von 08:30"></div>
+                <div><input type="text" value="${escapeHtml(row.bis)}" onchange="updateReportRowField(${i}, 'bis', this.value)" placeholder="bis 08:45"></div>
+            </div>
+        `;
+        c.appendChild(d);
+    });
+}
+
+
+function parseTimeToMinutes(v) {
+    const s = normalizeTimeValue(v || '');
+    const m = s.match(/^(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function getReportTotalSeconds() {
+    const rows = getReportRows().filter(r => r.include);
+    const validRows = rows.filter(r => parseTimeToMinutes(r.von) !== null || parseTimeToMinutes(r.bis) !== null);
+    if (!validRows.length) return 0;
+
+    let firstVon = null;
+    let lastBis = null;
+
+    for (const r of validRows) {
+        const a = parseTimeToMinutes(r.von);
+        if (a !== null) {
+            firstVon = a;
+            break;
+        }
+    }
+
+    for (let i = validRows.length - 1; i >= 0; i--) {
+        const b = parseTimeToMinutes(validRows[i].bis);
+        if (b !== null) {
+            lastBis = b;
+            break;
+        }
+    }
+
+    if (firstVon === null || lastBis === null) return 0;
+
+    let diff = lastBis - firstVon;
+    if (diff < 0) diff += 24 * 60;
+
+    return diff * 60;
+}
+
+function formatDurationDecimalHours(sec) {
+    return (sec / 3600).toFixed(2).replace('.', ',');
+}
+
+function renderEditList() {
+    const c = document.getElementById('edit-list'); c.innerHTML = "";
+    patients.forEach((p, i) => {
+        const safeAddr = String(p.a || "").replace(/'/g, "\'");
+        const d = document.createElement('div'); d.className = 'edit-item';
+        d.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div><button class="prio-btn" onclick="movePrio(${i},-1)">▲</button><button class="prio-btn" onclick="movePrio(${i},1)">▼</button><button class="prio-btn" onclick="duplicatePatient(${i})">⧉</button><b>№${i+1}</b></div>
+                <div><button class="btn-map" onclick="openMapByAddr('${safeAddr}')">📍</button><input type="checkbox" style="width:25px;height:25px;margin-left:10px;" ${p.active?'checked':''} onchange="patients[${i}].active=this.checked"></div>
+            </div>
+            <input type="text" value="${p.n || ''}" onchange="patients[${i}].n=this.value" placeholder="ФИО">
+            <input type="text" value="${p.a || ''}" onchange="patients[${i}].a=this.value" placeholder="Адрес">
+            <input type="text" value="${p.t || ''}" onchange="patients[${i}].t=this.value" placeholder="Время плана">
+            <input type="tel" value="${p.p || ''}" onchange="patients[${i}].p=this.value" placeholder="Телефон">
+        `;
+        c.appendChild(d);
+    });
+}
+
+function saveAndClose() {
+    patients = mergeDefaultPatients(patients);
+    localStorage.setItem('medPatients', JSON.stringify(patients));
+    mergeSuggestedPatientsIntoReportRows();
+    saveReportRows(getReportRows());
+    toggleMenu();
+    refreshUI();
+    refreshDateControls();
+}
+
+function openMap() {
+    const act = patients.filter(p => p.active);
+    let a = (currentIdx < act.length) ? act[currentIdx].a : OFFICE_ADDR;
+    openMapByAddr(a);
+}
+
+function openMapByAddr(addr) {
+    const fullAddr = addr ? addr + ', Hamburg' : addr;
+    if (window.AndroidBridge && typeof AndroidBridge.openMap === 'function') {
+        AndroidBridge.openMap(fullAddr || 'Hamburg');
+        return;
+    }
+    window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(fullAddr), "_blank");
+}
+
+function makeCall() {
+    const act = patients.filter(p => p.active);
+    if (currentIdx < act.length && act[currentIdx].p) {
+        let num = act[currentIdx].p.replace(/\s+/g, '');
+        if (num.length <= 8 && !num.startsWith('0')) num = '040' + num;
+        if (window.AndroidBridge && typeof AndroidBridge.dialPhone === 'function') {
+            AndroidBridge.dialPhone(num);
+        } else {
+            window.location.href = "tel:" + num;
+        }
+    }
+}
+
+function refreshUI() {
+    const act = patients.filter(p => p.active);
+    const nc = document.getElementById('normal-controls'), oc = document.getElementById('office-controls'), fc = document.getElementById('finish-controls');
+    const rBtn = document.getElementById('btn-road'), cBtn = document.getElementById('btn-client');
+
+    rBtn.classList.remove('btn-active-road'); cBtn.classList.remove('btn-active-client');
+    if (curMode === 'road') rBtn.classList.add('btn-active-road');
+    if (curMode === 'client') cBtn.classList.add('btn-active-client');
+
+    if (isFinished) { document.getElementById('p-name').innerText = "СМЕНА ЗАВЕРШЕНА"; nc.style.display = oc.style.display = 'none'; fc.style.display = 'block'; drawLogs(); return; }
+    fc.style.display = 'none';
+    if (currentIdx < act.length) {
+        const p = act[currentIdx];
+        document.getElementById('p-name').innerText = (currentIdx+1) + ". " + p.n;
+        document.getElementById('p-addr').innerText = p.a;
+        document.getElementById('p-tel').innerText = "тел. " + (p.p || "-");
+        document.getElementById('p-plan').innerText = p.t || "-";
+        nc.style.display = 'grid'; oc.style.display = 'none';
+    } else {
+        document.getElementById('p-name').innerText = "В ОФИС";
+        document.getElementById('p-addr').innerText = OFFICE_ADDR;
+        nc.style.display = 'none'; oc.style.display = 'block';
+        document.getElementById('btn-office-go').style.display = curMode === 'office' ? 'none' : 'block';
+        document.getElementById('btn-office-stop').style.display = curMode === 'office' ? 'block' : 'none';
+    }
+    drawLogs();
+}
+
+function press(m) {
+    const now = Date.now();
+    const timeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const currentTimer = document.getElementById('timer-val').innerText;
+
+    if (!shiftStartTs) { shiftStartTs = now; localStorage.setItem('shiftStartTs', shiftStartTs); }
+
+    if (curMode) {
+        if (curMode === 'client') {
+            const act = patients.filter(p=>p.active);
+            logs.push({ d: new Date().toLocaleDateString('ru-RU'), n: act[currentIdx]?.n || 'Пациент', von: vonTime, bis: timeStr, weg: lastWeg, geo: getGeoSnapshot() });
+            currentIdx++;
+        }
+        if (curMode === 'road' || curMode === 'office') lastWeg = currentTimer;
+    }
+
+    if (m === 'stop') {
+        const totalSec = Math.floor((now - parseInt(shiftStartTs)) / 1000);
+        localStorage.setItem('shiftTotalSec', totalSec);
+        logs.push({ d: new Date().toLocaleDateString('ru-RU'), n: 'ОФИС', von: vonTime, bis: timeStr, weg: currentTimer, geo: getGeoSnapshot() });
+        isFinished = true; localStorage.setItem('medFin', 'true'); clearInterval(timerInt); curMode = null;
+    } else {
+        curMode = m; startTime = now; vonTime = timeStr; startTimer();
+        document.getElementById('status-tag').innerText = m==='road' ? "🚗 В ПУТИ" : m==='client' ? "👨‍⚕️ ПРИЕМ" : "🏢 В ОФИС";
+    }
+    localStorage.setItem('medLogs', JSON.stringify(logs)); localStorage.setItem('medIdx', currentIdx); refreshUI(); requestGeo(true);
+}
+
+
+function startTimer() {
+    clearInterval(timerInt);
+    timerInt = setInterval(() => {
+        const d = Math.floor((Date.now() - startTime)/1000);
+        const h = Math.floor(d/3600).toString().padStart(2,'0'), m = Math.floor((d%3600)/60).toString().padStart(2,'0'), s = (d%60).toString().padStart(2,'0');
+        document.getElementById('timer-val').innerText = `${h}:${m}:${s}`;
+    }, 1000);
+}
+
+function drawLogs() {
+    const c = document.getElementById('history-list'); c.innerHTML = "";
+    logs.slice().reverse().forEach(l => {
+        const i = document.createElement('div'); i.className = 'history-item';
+        const geoLine = l.geo && l.geo.lat !== undefined ? `<br><small>📍 ${formatGeoShort(l.geo)}</small>` : '';
+        i.innerHTML = `<div><b>${l.n}</b><br><small>${l.von}-${l.bis}</small>${geoLine}</div><div style="color:var(--warning)">Путь: ${l.weg}</div>`;
+        c.appendChild(i);
+    });
+}
+
+function generatePDF() {
+    const payload = buildNativeReportPayload();
+    if (window.AndroidBridge && typeof AndroidBridge.generatePdfReport === 'function') {
+        AndroidBridge.generatePdfReport(JSON.stringify(payload));
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const dateStr = getSelectedReportDate().toLocaleDateString('ru-RU');
+    const rows = getReportRows().filter(r => r.include);
+    const sec = getReportTotalSeconds();
+    const h = Math.floor(sec/3600).toString().padStart(2,'0');
+    const m = Math.floor((sec%3600)/60).toString().padStart(2,'0');
+    const s = (sec%60).toString().padStart(2,'0');
+
+    doc.setFontSize(16);
+    doc.text('Shift Report: ' + dateStr, 10, 15);
+    doc.autoTable({
+        head: [['Patient', 'Ankunft (von)', 'Abfahrt (bis)']],
+        body: rows.map(r => [r.name, r.von, r.bis]),
+        startY: 25,
+        theme: 'grid'
+    });
+    doc.setFontSize(12);
+    doc.setTextColor(231, 76, 60);
+    doc.text('Gesamte Arbeitszeit (Смена): ' + h + ':' + m + ':' + s, 10, doc.lastAutoTable.finalY + 15);
+    doc.save('Report_' + dateStr.replace(/\./g, '-') + '.pdf');
+}
+
+
+function escapeHtml(v) {
+    return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getGermanWeekdayIndex(dateObj) {
+    const jsDay = dateObj.getDay(); // 0=So, 1=Mo ... 6=Sa
+    if (jsDay === 0) return 6; // So
+    return jsDay - 1; // Mo=0 ... Sa=5
+}
+
+
+function getSelectedReportDate() {
+    const saved = localStorage.getItem('reportDateOverride');
+    if (saved) {
+        const d = new Date(saved + 'T12:00:00');
+        if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+}
+
+function getDateInputValue() {
+    const saved = localStorage.getItem('reportDateOverride');
+    if (saved) return saved;
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function setReportDateAuto() {
+    localStorage.removeItem('reportDateOverride');
+    refreshDateControls();
+}
+
+function setReportDateManual(value) {
+    if (!value) return;
+    localStorage.setItem('reportDateOverride', value);
+    refreshDateControls();
+}
+
+function refreshDateControls() {
+    const label = document.getElementById('report-date-label');
+    const input = document.getElementById('report-date-input');
+    const mode = document.getElementById('report-date-mode');
+    const selected = getSelectedReportDate();
+
+    if (input) input.value = getDateInputValue();
+    if (label) label.textContent = selected.toLocaleDateString('de-DE', { weekday:'long', day:'2-digit', month:'2-digit', year:'numeric' });
+
+    const hasOverride = !!localStorage.getItem('reportDateOverride');
+    if (mode) mode.textContent = hasOverride ? 'Режим: вручную' : 'Режим: авто';
+}
+
+
+function formatHHMMFromTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(parseInt(ts, 10));
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function buildFilledTabelleHTML() {
+    const today = getSelectedReportDate();
+    const weekdayIdx = getGermanWeekdayIndex(today);
+    const weekdayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+    const reportRows = getReportRows().filter(r => r.include);
+    const shiftSec = getReportTotalSeconds();
+    const shiftHours = formatDurationDecimalHours(shiftSec);
+
+    const dayDate = today.toLocaleDateString('de-DE');
+    const employeeName = 'Mitarbeiter/in';
+
+    function cell(content = '', cls = '') {
+        return `<td class="${cls}">${content}</td>`;
+    }
+
+    let rows = '';
+    const maxRows = Math.max(28, reportRows.length);
+    for (let i = 0; i < maxRows; i++) {
+        const row = reportRows[i];
+        const name = row ? escapeHtml(row.name) : '';
+        const von = row ? escapeHtml(row.von || '') : '';
+        const bis = row ? escapeHtml(row.bis || '') : '';
+
+        let dayCells = '';
+        for (let d = 0; d < 7; d++) {
+            const dayVon = d === weekdayIdx ? von : '';
+            const dayBis = d === weekdayIdx ? bis : '';
+            dayCells += `<td>${dayVon}</td><td class="thick-right">${dayBis}</td>`;
+        }
+
+        rows += `<tr class="entry"><td class="left thick-right">${name}</td>${dayCells}<td></td></tr>`;
+    }
+
+    let dateRow = '';
+    let timeRow = '';
+    for (let d = 0; d < 7; d++) {
+        dateRow += `<td colspan="2" class="thick-right">${d === weekdayIdx ? dayDate : ''}</td>`;
+        timeRow += `<td class="center sub">von</td><td class="center sub thick-right">bis</td>`;
+    }
+
+    let kmRow = '';
+    let stdRow = '';
+    for (let d = 0; d < 7; d++) {
+        kmRow += `<td colspan="2"${d === 4 ? ' class="thick-right"' : ''}>${d === weekdayIdx ? '' : ''}</td>`;
+        stdRow += `<td colspan="2"${d === 4 ? ' class="thick-right"' : ''}>${d === weekdayIdx ? shiftHours : ''}</td>`;
+    }
+
+    return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tabelle</title>
+<style>
+  :root{
+    --outer: 2.4px;
+    --thick: 1.8px;
+    --thin: 1px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:#ffffff;
+    font-family:"Times New Roman", Times, serif;
+    color:#111;
+  }
+  .page{
+    width:1420px;
+    margin:26px auto;
+    padding:46px 36px 34px 36px;
+    background:#fff;
+  }
+  table.form{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    border:var(--outer) solid #111;
+  }
+  .form td,.form th{
+    border:var(--thin) solid #222;
+    padding:0;
+    vertical-align:middle;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+  .title{
+    font-size:31px;
+    line-height:1;
+    padding:8px 10px 6px 10px !important;
+    text-align:left;
+    font-weight:normal;
+    height:48px;
+  }
+  .left{ text-align:left; padding-left:8px !important; }
+  .center{ text-align:center; }
+  .day{ font-size:18px; font-weight:600; height:33px; }
+  .lbl{ font-size:16px; height:31px; }
+  .sub{ font-size:15px; height:30px; }
+  .patients{ font-size:20px; height:32px; letter-spacing:0.2px; }
+  .entry td{ height:23px; }
+  .bottomLabel{ font-size:17px; height:28px; }
+  .bottomRight{ font-size:17px; font-weight:600; padding-left:8px !important; }
+  .thick-right{ border-right:var(--thick) solid #111 !important; }
+  .thick-top{ border-top:var(--thick) solid #111 !important; }
+  col.c0{ width:226px; }
+  col.c1, col.c2, col.c3, col.c4, col.c5, col.c6, col.c7, col.c8, col.c9, col.c10, col.c11, col.c12, col.c13, col.c14{ width:72px; }
+  col.c15{ width:190px; }
+  .toolbar{
+    width:1420px;
+    margin:20px auto 0 auto;
+    display:flex;
+    gap:12px;
+  }
+  .toolbar button{
+    padding:12px 18px;
+    border:none;
+    background:#222;
+    color:#fff;
+    cursor:pointer;
+    border-radius:8px;
+    font-size:16px;
+  }
+  @media print{
+    .toolbar{ display:none; }
+    .page{
+      width:auto;
+      margin:0;
+      padding:10mm 8mm;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button onclick="window.print()">Drucken / PDF</button>
+</div>
+<div class="page">
+  <table class="form">
+    <colgroup>
+      <col class="c0">
+      <col class="c1"><col class="c2">
+      <col class="c3"><col class="c4">
+      <col class="c5"><col class="c6">
+      <col class="c7"><col class="c8">
+      <col class="c9"><col class="c10">
+      <col class="c11"><col class="c12">
+      <col class="c13"><col class="c14">
+      <col class="c15">
+    </colgroup>
+    <tr><td colspan="16" class="title thick-bottom">${escapeHtml(employeeName)}</td></tr>
+    <tr>
+      <td class="left lbl thick-right">Wochentag ⇨</td>
+      <td colspan="2" class="center day thick-right">Mo</td>
+      <td colspan="2" class="center day thick-right">Di</td>
+      <td colspan="2" class="center day thick-right">Mi</td>
+      <td colspan="2" class="center day thick-right">Do</td>
+      <td colspan="2" class="center day thick-right">Fr</td>
+      <td colspan="2" class="center day thick-right">Sa</td>
+      <td colspan="2" class="center day thick-right">So</td>
+      <td class="center day">Bemerkungen</td>
+    </tr>
+    <tr>
+      <td class="left lbl thick-right">Datum ⇨</td>
+      ${dateRow}
+      <td></td>
+    </tr>
+    <tr>
+      <td class="left lbl thick-right">Zeit ⇨</td>
+      ${timeRow}
+      <td></td>
+    </tr>
+    <tr>
+      <td class="left patients thick-right">⇩&nbsp;&nbsp;Patienten&nbsp;&nbsp;⇩</td>
+      <td></td><td class="thick-right"></td>
+      <td></td><td class="thick-right"></td>
+      <td></td><td class="thick-right"></td>
+      <td></td><td class="thick-right"></td>
+      <td></td><td class="thick-right"></td>
+      <td></td><td class="thick-right"></td>
+      <td></td><td class="thick-right"></td>
+      <td></td>
+    </tr>
+    ${rows}
+    <tr>
+      <td class="left bottomLabel thick-right thick-top">km - täglich ⇨</td>
+      ${kmRow}
+      <td class="bottomRight thick-top">Gesamt KM woch.:</td>
+    </tr>
+    <tr>
+      <td class="left bottomLabel thick-right">Std. - täglich ⇨</td>
+      ${stdRow}
+      <td class="bottomRight">Gesamt-Std. woch.:</td>
+    </tr>
+    <tr>
+      <td class="thick-right"></td>
+      <td></td><td></td>
+      <td></td><td></td>
+      <td></td><td></td>
+      <td></td><td></td>
+      <td></td><td></td>
+      <td></td><td></td>
+      <td></td><td class="thick-right"></td>
+      <td>${shiftHours}</td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>`;;
+}
+
+function downloadTabelleHTML() {
+    const html = buildFilledTabelleHTML();
+    const dateStr = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
+    if (window.AndroidBridge && typeof AndroidBridge.saveHtmlReport === 'function') {
+        AndroidBridge.saveHtmlReport(`tabelle_${dateStr}.html`, html);
+        return;
+    }
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `tabelle_${dateStr}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+
+function startNewShift() { if(confirm("Сбросить день?")){ localStorage.clear(); location.reload(); } }
+hydrateGeo();
+refreshUI();
+requestGeo(true);
+refreshDateControls();
+</script>
+</body>
+</html>
